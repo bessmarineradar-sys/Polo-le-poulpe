@@ -10,6 +10,14 @@ const PHRASES = [
   "Mon troisième tentacule le sentait depuis le début.",
 ];
 
+// Modèles essayés dans l'ordre. Vous pouvez en forcer un avec la variable GROQ_MODEL.
+const MODELES = [
+  process.env.GROQ_MODEL,
+  "llama-3.1-8b-instant",
+  "openai/gpt-oss-20b",
+  "llama-3.3-70b-versatile",
+].filter((m): m is string => Boolean(m));
+
 type Reponse = { choix: string; phrase: string; source: "ia" | "hasard" };
 
 function choixAuHasard(options: string[]): Reponse {
@@ -20,7 +28,8 @@ function choixAuHasard(options: string[]): Reponse {
   };
 }
 
-async function choixAvecIA(
+async function appelerModele(
+  modele: string,
   options: string[],
   contexte: string,
   apiKey: string
@@ -33,8 +42,8 @@ async function choixAvecIA(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        max_tokens: 200,
+        model: modele,
+        max_tokens: 800,
         temperature: 0.8,
         response_format: { type: "json_object" },
         messages: [
@@ -58,8 +67,8 @@ async function choixAvecIA(
       }),
     });
 
-        if (!res.ok) {
-      console.error("Groq erreur", res.status, await res.text());
+    if (!res.ok) {
+      console.error("Groq erreur", modele, res.status, await res.text());
       return null;
     }
 
@@ -70,13 +79,28 @@ async function choixAvecIA(
     const choix = options.find(
       (o) => o.toLowerCase() === String(json.choix).trim().toLowerCase()
     );
-    if (!choix || !json.phrase) return null;
+    if (!choix || !json.phrase) {
+      console.error("Groq réponse inattendue", modele, texte);
+      return null;
+    }
 
     return { choix, phrase: String(json.phrase), source: "ia" };
-   } catch (e) {
-    console.error("Groq exception", e);
+  } catch (e) {
+    console.error("Groq exception", modele, e);
     return null;
   }
+}
+
+async function choixAvecIA(
+  options: string[],
+  contexte: string,
+  apiKey: string
+): Promise<Reponse | null> {
+  for (const modele of MODELES) {
+    const reponse = await appelerModele(modele, options, contexte, apiKey);
+    if (reponse) return reponse;
+  }
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -99,7 +123,7 @@ export async function POST(request: Request) {
     );
   }
 
-   const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) console.error("GROQ_API_KEY absente");
   if (apiKey) {
     const reponseIA = await choixAvecIA(options, contexte, apiKey);
