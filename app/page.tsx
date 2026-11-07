@@ -1,19 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+type Choix = { choix: string; phrase: string; source: "ia" | "hasard" };
+
+const CLE_HISTORIQUE = "polo-historique";
 
 export default function Home() {
   const [options, setOptions] = useState("");
-  const [result, setResult] = useState<string | null>(null);
-  const [isError, setIsError] = useState(false);
+  const [contexte, setContexte] = useState("");
+  const [result, setResult] = useState<Choix | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [historique, setHistorique] = useState<Choix[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CLE_HISTORIQUE);
+      if (saved) setHistorique(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  const sauverHistorique = (liste: Choix[]) => {
+    setHistorique(liste);
+    try {
+      localStorage.setItem(CLE_HISTORIQUE, JSON.stringify(liste));
+    } catch {}
+  };
 
   const handlePredict = async () => {
     if (!options.trim()) return;
 
     setLoading(true);
     setResult(null);
-    setIsError(false);
+    setError(null);
 
     try {
       const res = await fetch("/api/choix", {
@@ -24,20 +44,20 @@ export default function Home() {
             .split(",")
             .map((o) => o.trim())
             .filter(Boolean),
+          contexte,
         }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        setResult(data.choix);
+        setResult(data);
+        sauverHistorique([data, ...historique].slice(0, 5));
       } else {
-        setIsError(true);
-        setResult(data.error ?? "Polo n'a pas compris.");
+        setError(data.error ?? "Polo n'a pas compris.");
       }
     } catch {
-      setIsError(true);
-      setResult("Impossible de contacter Polo 🐙");
+      setError("Impossible de contacter Polo 🐙");
     } finally {
       setLoading(false);
     }
@@ -64,6 +84,21 @@ export default function Home() {
           placeholder="Ex: Pizza, Sushi, Burger..."
         />
 
+        <div className="field">
+          <label className="label" htmlFor="contexte">
+            Contexte (facultatif)
+          </label>
+          <input
+            id="contexte"
+            className="input"
+            type="text"
+            value={contexte}
+            onChange={(e) => setContexte(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handlePredict()}
+            placeholder="Ex: Il pleut et j'ai très faim"
+          />
+        </div>
+
         <button
           className="button"
           onClick={handlePredict}
@@ -72,12 +107,43 @@ export default function Home() {
           {loading ? "Polo réfléchit... 🤔" : "🐙 Polo, ton choix !"}
         </button>
 
+        {error && (
+          <div className="result error">
+            <p className="result-label">Oups</p>
+            <p className="result-text">{error}</p>
+          </div>
+        )}
+
         {result && (
-          <div className={isError ? "result error" : "result"}>
-            <p className="result-label">
-              {isError ? "Oups" : "La réponse de l'océan"}
-            </p>
-            <p className="result-text">{result}</p>
+          <div className="result">
+            <p className="result-label">La réponse de l'océan</p>
+            <p className="result-text">{result.choix}</p>
+            <p className="phrase">{result.phrase}</p>
+            {result.source === "ia" && (
+              <span className="badge">✨ avis de l'IA</span>
+            )}
+          </div>
+        )}
+
+        {historique.length > 0 && (
+          <div className="history">
+            <div className="history-head">
+              <p className="history-title">Derniers choix</p>
+              <button
+                className="link-button"
+                onClick={() => sauverHistorique([])}
+              >
+                Effacer
+              </button>
+            </div>
+            <ul>
+              {historique.map((h, i) => (
+                <li key={i}>
+                  <strong>{h.choix}</strong>
+                  <span>{h.phrase}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
