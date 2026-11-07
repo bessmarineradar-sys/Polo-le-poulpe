@@ -10,13 +10,36 @@ const PHRASES = [
   "Mon troisième tentacule le sentait depuis le début.",
 ];
 
-// Modèles essayés dans l'ordre. Vous pouvez en forcer un avec la variable GROQ_MODEL.
 const MODELES = [
   process.env.GROQ_MODEL,
   "llama-3.1-8b-instant",
   "openai/gpt-oss-20b",
   "llama-3.3-70b-versatile",
 ].filter((m): m is string => Boolean(m));
+
+// Limite : 8 réponses IA par visiteur toutes les 10 minutes
+const LIMITE_IA = 8;
+const FENETRE_MS = 10 * 60 * 1000;
+const compteurs = new Map<string, { count: number; reset: number }>();
+
+function iaAutorisee(ip: string): boolean {
+  const maintenant = Date.now();
+
+  if (compteurs.size > 1000) {
+    for (const [cle, v] of compteurs) {
+      if (v.reset < maintenant) compteurs.delete(cle);
+    }
+  }
+
+  const entree = compteurs.get(ip);
+  if (!entree || entree.reset < maintenant) {
+    compteurs.set(ip, { count: 1, reset: maintenant + FENETRE_MS });
+    return true;
+  }
+  if (entree.count >= LIMITE_IA) return false;
+  entree.count += 1;
+  return true;
+}
 
 type Reponse = { choix: string; phrase: string; source: "ia" | "hasard" };
 
@@ -123,9 +146,13 @@ export async function POST(request: Request) {
     );
   }
 
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "inconnu";
+
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) console.error("GROQ_API_KEY absente");
-  if (apiKey) {
+
+  if (apiKey && iaAutorisee(ip)) {
     const reponseIA = await choixAvecIA(options, contexte, apiKey);
     if (reponseIA) return NextResponse.json(reponseIA);
   }
