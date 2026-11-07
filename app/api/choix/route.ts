@@ -25,10 +25,10 @@ const compteurs = new Map<string, { count: number; reset: number }>();
 function iaAutorisee(ip: string): boolean {
   const maintenant = Date.now();
 
-  if (compteurs.size > 1000) {
-    for (const [cle, v] of compteurs) {
+    if (compteurs.size > 1000) {
+    compteurs.forEach((v, cle) => {
       if (v.reset < maintenant) compteurs.delete(cle);
-    }
+    });
   }
 
   const entree = compteurs.get(ip);
