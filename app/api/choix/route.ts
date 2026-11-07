@@ -58,7 +58,10 @@ async function choixAvecIA(
       }),
     });
 
-    if (!res.ok) return null;
+        if (!res.ok) {
+      console.error("Groq erreur", res.status, await res.text());
+      return null;
+    }
 
     const data = await res.json();
     const texte: string = data.choices?.[0]?.message?.content ?? "";
