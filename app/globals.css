@@ -65,3 +65,70 @@
   font-size: 0.8rem;
   color: #bfdbfe;
 }
+.field {
+  margin-top: 1rem;
+}
+
+.phrase {
+  margin: 0.75rem 0 0;
+  font-size: 0.95rem;
+  font-style: italic;
+  color: #dcfce7;
+}
+
+.badge {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.75rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.history {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.history-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #dbeafe;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  color: #bfdbfe;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.history ul {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.9rem;
+}
+
+.history li span {
+  font-size: 0.8rem;
+  color: #bfdbfe;
+}
