@@ -99,7 +99,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const apiKey = process.env.GROQ_API_KEY;
+   const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) console.error("GROQ_API_KEY absente");
   if (apiKey) {
     const reponseIA = await choixAvecIA(options, contexte, apiKey);
     if (reponseIA) return NextResponse.json(reponseIA);
