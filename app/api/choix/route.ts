@@ -73,7 +73,8 @@ async function choixAvecIA(
     if (!choix || !json.phrase) return null;
 
     return { choix, phrase: String(json.phrase), source: "ia" };
-  } catch {
+   } catch (e) {
+    console.error("Groq exception", e);
     return null;
   }
 }
