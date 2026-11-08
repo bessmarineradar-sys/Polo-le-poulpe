@@ -10,11 +10,14 @@ const PHRASES = [
   "Mon troisième tentacule le sentait depuis le début.",
 ];
 
+const NUL = "Match nul";
+const CHANCE_NUL_HASARD = 0.25;
+
 const MODELES = [
   process.env.GROQ_MODEL,
-  "llama-3.1-8b-instant",
   "openai/gpt-oss-20b",
   "llama-3.3-70b-versatile",
+  "llama-3.1-8b-instant",
 ].filter((m): m is string => Boolean(m));
 
 // Limite : 8 réponses IA par visiteur toutes les 10 minutes
@@ -25,7 +28,7 @@ const compteurs = new Map<string, { count: number; reset: number }>();
 function iaAutorisee(ip: string): boolean {
   const maintenant = Date.now();
 
-    if (compteurs.size > 1000) {
+  if (compteurs.size > 1000) {
     compteurs.forEach((v, cle) => {
       if (v.reset < maintenant) compteurs.delete(cle);
     });
@@ -43,10 +46,17 @@ function iaAutorisee(ip: string): boolean {
 
 type Reponse = { choix: string; phrase: string; source: "ia" | "hasard" };
 
-function choixAuHasard(options: string[]): Reponse {
+function choixAuHasard(options: string[], nul: boolean): Reponse {
+  const phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+
+  if (nul && Math.random() < CHANCE_NUL_HASARD) {
+    return { choix: NUL, phrase, source: "hasard" };
+  }
+
+  const vraies = options.filter((o) => o !== NUL);
   return {
-    choix: options[Math.floor(Math.random() * options.length)],
-    phrase: PHRASES[Math.floor(Math.random() * PHRASES.length)],
+    choix: vraies[Math.floor(Math.random() * vraies.length)],
+    phrase,
     source: "hasard",
   };
 }
@@ -75,6 +85,8 @@ async function appelerModele(
             content:
               "Tu es Polo le Poulpe, un oracle marin drôle et bienveillant. " +
               "Tu choisis UNE option parmi celles proposées, en tenant compte du contexte s'il y en a un. " +
+              `Si l'option « ${NUL} » est proposée, elle signifie qu'aucune équipe ne gagne : ` +
+              "choisis-la seulement si un match nul semble plausible. " +
               'Réponds uniquement avec un objet JSON : {"choix": "...", "phrase": "..."}. ' +
               "Le champ choix doit être exactement l'une des options. " +
               "Le champ phrase est une justification courte, en français, avec une touche d'humour marin. " +
@@ -146,6 +158,11 @@ export async function POST(request: Request) {
     );
   }
 
+  // Option « Match nul » (facultative), ajoutée si elle n'y est pas déjà
+  const nul = body?.nul === true;
+  const dejaPresent = options.some((o) => o.toLowerCase() === NUL.toLowerCase());
+  const toutesOptions = nul && !dejaPresent ? [...options, NUL] : options;
+
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "inconnu";
 
@@ -153,9 +170,9 @@ export async function POST(request: Request) {
   if (!apiKey) console.error("GROQ_API_KEY absente");
 
   if (apiKey && iaAutorisee(ip)) {
-    const reponseIA = await choixAvecIA(options, contexte, apiKey);
+    const reponseIA = await choixAvecIA(toutesOptions, contexte, apiKey);
     if (reponseIA) return NextResponse.json(reponseIA);
   }
 
-  return NextResponse.json(choixAuHasard(options));
+  return NextResponse.json(choixAuHasard(toutesOptions, nul));
 }
