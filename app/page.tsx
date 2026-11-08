@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-type Choix = { choix: string; phrase: string; source: "ia" | "hasard" };
+type Choix = {
+  choix: string;
+  phrase: string;
+  source: "ia" | "hasard";
+  donnees?: boolean;
+};
 
 const CLE_HISTORIQUE = "polo-historique";
 
@@ -10,6 +15,7 @@ export default function Home() {
   const [options, setOptions] = useState("");
   const [contexte, setContexte] = useState("");
   const [matchNul, setMatchNul] = useState(false);
+  const [competition, setCompetition] = useState("");
   const [result, setResult] = useState<Choix | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -46,7 +52,8 @@ export default function Home() {
             .map((o) => o.trim())
             .filter(Boolean),
                  contexte,
-          nul: matchNul,
+                   nul: matchNul,
+          competition,
         }),
       });
 
@@ -100,6 +107,25 @@ export default function Home() {
             placeholder="Ex: Il pleut et j'ai très faim"
           />
         </div>
+                <div className="field">
+          <label className="label" htmlFor="competition">
+            Compétition (facultatif, pour des données réelles)
+          </label>
+          <select
+            id="competition"
+            className="input"
+            value={competition}
+            onChange={(e) => setCompetition(e.target.value)}
+          >
+            <option value="">Aucune</option>
+            <option value="CL">Ligue des champions</option>
+            <option value="PL">Premier League</option>
+            <option value="PD">Liga</option>
+            <option value="FL1">Ligue 1</option>
+            <option value="SA">Serie A</option>
+            <option value="BL1">Bundesliga</option>
+          </select>
+        </div>
         <label className="check">
           <input
             type="checkbox"
@@ -128,8 +154,11 @@ export default function Home() {
             <p className="result-label">La réponse de l'océan</p>
             <p className="result-text">{result.choix}</p>
             <p className="phrase">{result.phrase}</p>
-            {result.source === "ia" && (
+                       {result.source === "ia" && (
               <span className="badge">✨ avis de l'IA</span>
+            )}
+            {result.donnees && (
+              <span className="badge">📊 avec le classement</span>
             )}
           </div>
         )}
