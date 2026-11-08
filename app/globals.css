@@ -225,3 +225,18 @@ body {
   font-size: 0.8rem;
   color: #bfdbfe;
 }
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #dbeafe;
+  cursor: pointer;
+}
+
+.check input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: #9333ea;
+}
