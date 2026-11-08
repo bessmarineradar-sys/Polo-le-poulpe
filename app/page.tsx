@@ -9,6 +9,7 @@ const CLE_HISTORIQUE = "polo-historique";
 export default function Home() {
   const [options, setOptions] = useState("");
   const [contexte, setContexte] = useState("");
+  const [matchNul, setMatchNul] = useState(false);
   const [result, setResult] = useState<Choix | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -44,7 +45,8 @@ export default function Home() {
             .split(",")
             .map((o) => o.trim())
             .filter(Boolean),
-          contexte,
+                 contexte,
+          nul: matchNul,
         }),
       });
 
@@ -98,7 +100,14 @@ export default function Home() {
             placeholder="Ex: Il pleut et j'ai très faim"
           />
         </div>
-
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={matchNul}
+            onChange={(e) => setMatchNul(e.target.checked)}
+          />
+          Autoriser le match nul 🤝
+        </label>
         <button
           className="button"
           onClick={handlePredict}
