@@ -9,6 +9,8 @@ const AIDE =
   "Avec contexte, compétition et match nul (facultatifs) :\n" +
   "/choix Arsenal, PSG | Qui gagne ? | CL nul\n\n" +
   "Compétitions : CL, PL, PD, FL1, SA, BL1\n\n" +
+  "Pour regrouper des pronostics (un par virgule ou par ligne) :\n" +
+  "/consensus Arsenal, Arsenal, PSG, Arsenal, nul\n\n" +
   "⚠️ Pour le fun : aucune garantie, ne parie pas d'argent.";
 
 type MessageTelegram = {
@@ -62,6 +64,51 @@ export async function POST(request: Request) {
 
   if (nom === "start" || nom === "help" || nom === "aide") {
     await envoyer(token, chatId, AIDE);
+    return NextResponse.json({ ok: true });
+  }
+
+  // Regroupe des pronostics et calcule la part de chaque issue
+  if (nom === "consensus") {
+    const avis: string[] = reste
+      .split(/[,\n]/)
+      .map((a: string) => a.trim())
+      .filter(Boolean);
+
+    if (avis.length < 2) {
+      await envoyer(
+        token,
+        chatId,
+        "Donne-moi au moins 2 pronostics.\nExemple : /consensus Arsenal, Arsenal, PSG, nul"
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    const compte = new Map<string, { nom: string; n: number }>();
+    avis.forEach((a: string) => {
+      const cle = a.toLowerCase();
+      const existant = compte.get(cle);
+      if (existant) existant.n += 1;
+      else compte.set(cle, { nom: a, n: 1 });
+    });
+
+    const lignes: { nom: string; n: number }[] = [];
+    compte.forEach((v) => lignes.push(v));
+    lignes.sort((x, y) => y.n - x.n);
+
+    const detail = lignes
+      .map(
+        (l) =>
+          `${l.nom} : ${Math.round((l.n * 100) / avis.length)} % (${l.n}/${avis.length})`
+      )
+      .join("\n");
+
+    await envoyer(
+      token,
+      chatId,
+      `📊 Consensus de ${avis.length} pronostics :\n\n${detail}\n\n` +
+        "ℹ️ C'est la part des pronostiqueurs qui ont choisi chaque issue, " +
+        "pas une probabilité de gagner.\n⚠️ Pour le fun, aucune garantie."
+    );
     return NextResponse.json({ ok: true });
   }
 
