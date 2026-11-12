@@ -11,6 +11,11 @@ const AIDE =
   "Compétitions : CL, PL, PD, FL1, SA, BL1\n\n" +
   "⚠️ Pour le fun : aucune garantie, ne parie pas d'argent.";
 
+type MessageTelegram = {
+  text?: unknown;
+  chat?: { id?: unknown; type?: unknown };
+};
+
 async function envoyer(token: string, chatId: number, texte: string) {
   try {
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -36,26 +41,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
-  const update = await request.json().catch(() => null);
-  const message = update?.message;
-  const chatId = message?.chat?.id;
-  const texte = typeof message?.text === "string" ? message.text.trim() : "";
+  const update = (await request.json().catch(() => null)) as {
+    message?: MessageTelegram;
+  } | null;
+  const message: MessageTelegram = update?.message ?? {};
+  const chatId = message.chat?.id;
+  const texte: string =
+    typeof message.text === "string" ? message.text.trim() : "";
 
   if (typeof chatId !== "number" || !texte) {
     return NextResponse.json({ ok: true });
   }
 
-  const prive = message.chat.type === "private";
-  const commande = texte.match(/^\/(\w+)(?:@\w+)?\s*([\s\S]*)$/);
-  const nom = commande ? commande[1].toLowerCase() : "";
-  const reste = commande ? commande[2].trim() : texte;
+  const prive: boolean = message.chat?.type === "private";
+  const commande: RegExpMatchArray | null = texte.match(
+    /^\/(\w+)(?:@\w+)?\s*([\s\S]*)$/
+  );
+  const nom: string = commande ? commande[1].toLowerCase() : "";
+  const reste: string = commande ? commande[2].trim() : texte;
 
   if (nom === "start" || nom === "help" || nom === "aide") {
     await envoyer(token, chatId, AIDE);
     return NextResponse.json({ ok: true });
   }
 
-  const estChoix =
+  const estChoix: boolean =
     nom === "choix" || (!commande && prive && texte.includes(","));
 
   if (!estChoix) {
@@ -65,15 +75,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const parties = reste.split("|").map((s) => s.trim());
-  const options = (parties[0] || "")
+  const parties: string[] = reste.split("|").map((s: string) => s.trim());
+  const options: string[] = (parties[0] || "")
     .split(",")
-    .map((o) => o.trim())
+    .map((o: string) => o.trim())
     .filter(Boolean);
-  const contexte = parties[1] || "";
-  const reglages = (parties[2] || "").toUpperCase().split(/\s+/);
-  const competition = CODES.find((c) => reglages.includes(c)) ?? "";
-  const nul = reglages.includes("NUL");
+  const contexte: string = parties[1] || "";
+  const reglages: string[] = (parties[2] || "").toUpperCase().split(/\s+/);
+  const competition: string = CODES.find((c) => reglages.includes(c)) ?? "";
+  const nul: boolean = reglages.includes("NUL");
 
   if (options.length < 2) {
     await envoyer(
@@ -91,7 +101,13 @@ export async function POST(request: Request) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ options, contexte, competition, nul }),
     });
-    const data = await res.json();
+    const data = (await res.json()) as {
+      choix?: string;
+      phrase?: string;
+      source?: string;
+      donnees?: boolean;
+      error?: string;
+    };
 
     if (!res.ok) {
       await envoyer(token, chatId, data.error ?? "Polo n'a pas compris.");
